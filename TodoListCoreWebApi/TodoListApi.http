@@ -1,0 +1,30 @@
+@TodoListApi_HostAddress = http://localhost:5052
+
+GET {{TodoListApi_HostAddress}}/api/todolist
+Accept: application/json
+
+###
+
+@id=0
+GET {{TodoListApi_HostAddress}}/api/todolist/{{id}}
+
+###
+
+@id=0
+PUT {{TodoListApi_HostAddress}}/api/todolist/{{id}}
+Content-Type: application/json
+{
+  "name": "Updated This Carwash Reminder",
+  "description": "Updated this description for the first todolist item! Take car to the carwash."
+}
+
+###
+
+POST {{TodoListApi_HostAddress}}/api/todolist
+Content-Type: application/json
+{
+  "name": "Carwash Reminder",
+  "description": "Take car to the carwash."
+}
+
+###

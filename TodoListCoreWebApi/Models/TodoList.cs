@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TodoListCoreWebApi.Models
+namespace TodoList.Models
 {
     /* 
         Added a Data Transfer Object (DTO)!     
@@ -19,31 +19,35 @@ namespace TodoListCoreWebApi.Models
         THERE SHOULD NEVER BE MORE THAN ONE REASON FOR A CLASS TO CHANGE.".
         Ref SRP: https://web.archive.org/web/20150202200348/http://www.objectmentor.com/resources/articles/srp.pdf
      */
-    public class TodoListItemModelDto
+    public class TodoListDto
     {
         [Key]
         public long Id { get; set; }
 
+        [MaxLength(500)]
+        public string Name { get; set; } = "";
+
         [MaxLength(2500)]
         public string Description { get; set; } = "";
-        public DateTime DateTime { get; set; }
+        public DateTime? DateTime { get; set; }
 
         public bool IsComplete { get; set; } = false;
     }
 
-    public class TodoListItemModel : TodoListItemModelDto
+    public class TodoList : TodoListDto
     {
+        //The secret field needs to be hidden from this app, but an administrative app could choose to expose it.
         private string? Secret { get; set; }
-        public TodoListItemModel()
+        public TodoList()
         {
         }
 
-        public TodoListItemModel(TodoListItemModelDto todoListItemModelDto)
+        public TodoList(TodoListDto todoListDto)
         {
-            Id = todoListItemModelDto.Id;
-            Description = todoListItemModelDto.Description;
-            DateTime = todoListItemModelDto.DateTime;
-            IsComplete = todoListItemModelDto.IsComplete;
+            Id = todoListDto.Id;
+            Description = todoListDto.Description;
+            DateTime = todoListDto.DateTime;
+            IsComplete = todoListDto.IsComplete;
         }
     }
 }

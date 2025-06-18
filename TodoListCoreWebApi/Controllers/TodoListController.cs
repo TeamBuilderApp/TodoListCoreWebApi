@@ -1,126 +1,147 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using TodoListCoreWebApi.Models;
+using Microsoft.EntityFrameworkCore;
+using TodoList.Models;
 
-namespace TodoListCoreWebApi.Controllers
+namespace TodoList.Controllers
 {
+    [Route("api/[controller]")]
     [ApiController]
-    [Route("[controller]")]
     public class TodoListController : ControllerBase
     {
-
+        private readonly TodoListDbContext _context;
         private readonly ILogger<TodoListController> _logger;
 
-        public TodoListController(ILogger<TodoListController> logger)
+        public TodoListController(TodoListDbContext context, ILogger<TodoListController> logger)
         {
+            _context = context;
             _logger = logger;
         }
 
-        //Get all todo list items
-        //Returns a response body as an array of strings.
+        // GET: api/TodoList
+        // Get all todo list items.
+        // Returns a response body as an array of strings.
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TodoListItemModelDto>>> Get()
+        public async Task<ActionResult<IEnumerable<TodoListDto>>> GetTodoItems()
         {
-            /*
-                         return await _context.TodoList
-                 .Select(x => TodoList.Models.TodoList.TodoListItemModelDto(x))
-                 .ToListAsync();
-             */
-            return NoContent();
+            return await _context.TodoList
+                .Select(x => TodoListItemToDto(x))
+                .ToListAsync();
         }
 
-        //Gets a single todo list item by item by its id number.
-        //Returns a response body as a string.
+        // GET: api/TodoList/id
+        // Gets a single todo list item by item by its ID.
+        // Returns a response body as a string.
+        // <snippet_GetByID>
         [HttpGet("{id}")]
-        public async Task<ActionResult<TodoListItemModelDto>> Get(long id)
+        public async Task<ActionResult<TodoListDto>> Get(long id)
         {
-            /*TodoList.Models.TodoList? todoListItem = await _context.TodoList.FindAsync(id);
+            var todoItem = await _context.TodoList.FindAsync(id);
 
-            if (todoListItem == null)
+            if (todoItem == null)
             {
-                return NotFound(); //404
+                return NotFound();
             }
 
-            return TodoList.Models.TodoList.TodoListItemModelDto(todoListItem);*/
-            return NoContent();
+            return todoItem;
         }
+        // </snippet_GetByID>
 
-        //Updates a single todo list item by item its id number.
-        //Returns a response body as a string.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Put(long id, TodoListItemModelDto todoListItemModelDto)
-        {
-            /*todoListItemModelDto.Id = id;
-
-            var todoListItem = await _context.todoList.FindAsync(id);
-            if (todoListItem == null)
-            {
-                return NotFound(); //404
-            }
-
-            try
-            {
-                _ = await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException) when (!todoListItemExists(id))
-            {
-                return NotFound(); //404
-            }
-            */
-            return NoContent();
-        }
-
-        //Saves a new todo list item with max ID + 1, to an Azure SQL Relational DB.
+        // PUT: api/TodoList/id
+        // Updates a single todo list item by item its id number.
+        // Returns a response body as a string.
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<TodoListItemModelDto>> Post(TodoListItemModelDto todoListItemDto)
+        // <snippet_Update>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutTodoItem(long id, TodoListDto todoListDto)
         {
-            Models.TodoListItemModel todoListItem = new(todoListItemDto);
+            if (id != todoListDto.Id)
+            {
+                return BadRequest();
+            }
+
+            var todoItem = await _context.TodoList.FindAsync(id);
+            if (todoItem == null)
+            {
+                return NotFound();
+            }
+
+            todoItem.Name = todoListDto.Name;
+            todoItem.IsComplete = todoListDto.IsComplete;
 
             try
             {
-                _ = _context.TodoListItemModel.Add(todoListItem);
-                _ = await _context.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
-                return NotFound(); //404
-            }
-
-            return CreatedAtAction(
-                nameof(Get),
-                new { id = todoListItem.Id },
-                todoListItemDto);
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(long id)
-        {
-            /*TodoList.Models.TodoList? todoListItem = await _context.TodoList.FindAsync(id);
-            if (todoListItem == null)
-            {
-                return NotFound(); //404
-            }
-
-            try
-            {
-                _ = _context.TodoList.Remove(todoListItem);
-                _ = await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException) when (!TodoListItemExists(id))
             {
-                return NotFound(); //404
+                return NotFound();
             }
-            */
+
             return NoContent();
         }
+        // </snippet_Update>
 
-        // Returns true if a todo item could be found by ID.
+        // POST: api/TodoList
+        // Saves a new todo list item with max ID + 1, to an Azure SQL Relational DB.
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // <snippet_Create>
+        [HttpPost]
+        public async Task<ActionResult<TodoListDto>> Post(TodoListDto todoListDto)
+        {
+            var todoItem = new Models.TodoList
+            {
+                IsComplete = todoListDto.IsComplete,
+                Name = todoListDto.Name,
+                Description = todoListDto.Description,
+                DateTime = todoListDto.DateTime
+            };
+
+            _context.TodoList.Add(todoItem);
+            await _context.SaveChangesAsync();
+
+            //Turn to DTO because we have to call the Get to fetch the latest.
+            return CreatedAtAction(
+                nameof(Get),
+                new { id = todoItem.Id },
+                TodoListItemToDto(todoItem));
+        }
+        // </snippet_Create>
+
+        // DELETE: api/TodoList/id
+        // Deletes a todo list item by ID from the list, if it exists.
+        // <snippet_Delete>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(long id)
+        {
+            var todoItem = await _context.TodoList.FindAsync(id);
+            if (todoItem == null)
+            {
+                return NotFound();
+            }
+
+            _context.TodoList.Remove(todoItem);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        // </snippet_Delete>
+
+        // Returns true if a todo list item could be found by ID.
         private bool TodoListItemExists(long id)
         {
-            //return _context.todoList.Any(e => e.Id == id);
-            return false;
+            return _context.TodoList.Any(e => e.Id == id);
         }
+
+        //Converts a todo list item object to a todo list item object DTO.
+        private static TodoListDto TodoListItemToDto(TodoList.Models.TodoList todoItem) =>
+        new TodoListDto
+        {
+            Id = todoItem.Id,
+            Name = todoItem.Name,
+            Description = todoItem.Description,
+            IsComplete = todoItem.IsComplete
+        };
 
     }
 }
