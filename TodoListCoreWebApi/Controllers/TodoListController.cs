@@ -70,6 +70,29 @@ namespace TodoListCoreWebApi.Controllers
             return NoContent();
         }
 
+        //Saves a new todo list item with max ID + 1, to an Azure SQL Relational DB.
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<TodoListItemModelDto>> Post(TodoListItemModelDto todoListItemDto)
+        {
+            Models.TodoListItemModel todoListItem = new(todoListItemDto);
+
+            try
+            {
+                _ = _context.TodoListItemModel.Add(todoListItem);
+                _ = await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                return NotFound(); //404
+            }
+
+            return CreatedAtAction(
+                nameof(Get),
+                new { id = todoListItem.Id },
+                todoListItemDto);
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(long id)
         {
